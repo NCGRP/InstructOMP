@@ -1,10 +1,11 @@
 CC=gcc -O3
+//CPP=g++
 
 InStruct: InStruct.o data_interface.o mcmc.o initial.o check_converg.o result_analysis.o DPMM.o random.o quantile.o nrutil.o poly_geno.o
 	$(CC) -Wall -o InStruct InStruct.o data_interface.o mcmc.o initial.o check_converg.o DPMM.o result_analysis.o quantile.o random.o nrutil.o poly_geno.o -lm -fopenmp
 
-InStruct.o: InStruct.c data_interface.h mcmc.h random.h initial.h check_converg.h result_analysis.h quantile.h nrutil.h poly_geno.h
-	$(CC) -Wall -c InStruct.c -fopenmp
+InStruct.o: Instruct.c data_interface.h mcmc.h random.h initial.h check_converg.h result_analysis.h quantile.h nrutil.h poly_geno.h
+	$(CC) -Wall -c Instruct.c -fopenmp
 
 data_interface.o: data_interface.c data_interface.h nrutil.h
 	$(CC) -Wall -c data_interface.c
