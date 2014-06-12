@@ -1,5 +1,5 @@
 CC=gcc -O3
-//CPP=g++
+#CPP=g++
 
 InStruct: InStruct.o data_interface.o mcmc.o initial.o check_converg.o result_analysis.o DPMM.o random.o quantile.o nrutil.o poly_geno.o
 	$(CC) -Wall -o InStruct InStruct.o data_interface.o mcmc.o initial.o check_converg.o DPMM.o result_analysis.o quantile.o random.o nrutil.o poly_geno.o -lm -fopenmp
@@ -37,3 +37,5 @@ random.o: random.c random.h nrutil.h
 nrutil.o: nrutil.c nrutil.h
 	$(CC) -Wall -c nrutil.c
 
+clean:
+	rm -rf *.o
