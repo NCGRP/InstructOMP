@@ -543,15 +543,12 @@ void printinfo(char *outfilename,int argc, char **argv,SEQDATA data)
 
 void inf_K_val(char *outfilename, int n_small, int n_large, SEQDATA *data,INIT initial)
 {
-	/*//flag=0;
+
+	//flag=0;
 	int parallelism_enabled = 1; //0=no, not 0 = yes
-	//capture the outputfilename
-	char foutfilename[strlen(outfilename)];
-	strcpy(foutfilename, outfilename);
 
-	#pragma omp parallel if(parallelism_enabled)  //firstprivate(data)
-	{*/
-
+	#pragma omp parallel if(parallelism_enabled)
+	{
 
 	int K,chn,K_best,K_num;//flag,,temp;
 	double **dic,*val_K;
@@ -569,27 +566,27 @@ void inf_K_val(char *outfilename, int n_small, int n_large, SEQDATA *data,INIT i
 	dic=dmatrix(0,K_num-1,0,initial.chainnum-1);
 	val_K=dvector(0,K_num-1);
 
-	//flag=0;
+	/*//flag=0;
 	int parallelism_enabled = 1; //0=no, not 0 = yes
-	//capture the outputfilename
-	char foutfilename[strlen(outfilename)];
-	strcpy(foutfilename, outfilename);
 
-	#pragma omp parallel if(parallelism_enabled)  //firstprivate(data)
-	{
+	#pragma omp parallel if(parallelism_enabled)
+	{*/
+		//initialize private variables
+		char foutfilename[strlen(outfilename)];
+		
 		#pragma omp for
 
 		for(K=n_small;K<=n_large;K++)
 		{
 			//modify outfilename so each K produces its own output
-			strcpy(outfilename,foutfilename); //start with original outfilename
+			strcpy(foutfilename,outfilename); //start with original outfilename
 
 			int ndigits = floor(log10(K)) + 1;
 			char p[ndigits]; //char array to contain int, sized to length of K
 			char pp[2] = ".";
 			sprintf(p, "%d", K); //convert integer K into a char array
-			strncat(outfilename, pp, 1); //add terminal "."
-			strncat(outfilename, p, strlen(p)); //add terminal "K"
+			strncat(foutfilename, pp, 1); //add terminal "."
+			strncat(foutfilename, p, strlen(p)); //add terminal "K"
 
 			int tid = omp_get_thread_num();
 			printf("t%d,K%d,p%s,pp%s,out(%s),fout(%s)\n",tid,K,p,pp,outfilename,foutfilename);
@@ -602,7 +599,7 @@ void inf_K_val(char *outfilename, int n_small, int n_large, SEQDATA *data,INIT i
 			
 			printf("t%d,data.popnum%d\n",tid,(*data).popnum);
 			
-			if((outfile=fopen(outfilename,"a+"))==NULL)
+			if((outfile=fopen(foutfilename,"a+"))==NULL)
 			{	nrerror("Cannot open output file!");}
 			fprintf(outfile,"\n\nThe current K is %d\n",K);
 
@@ -612,13 +609,13 @@ void inf_K_val(char *outfilename, int n_small, int n_large, SEQDATA *data,INIT i
 			for(chn=0;chn<initial.chainnum;chn++)					
 			{	
 				chain=mcmc_updating((*data),initial,chn,&cvg);
-				dic[K-n_small][chn]=chain_stat(outfilename,chain,*data,chn);
+				dic[K-n_small][chn]=chain_stat(foutfilename,chain,*data,chn);
 				free_chain(&chain,(*data));
 			}
 			if(GR_flag==1) 
 			{	
 				//temp=
-				chain_converg(outfilename,&cvg);
+				chain_converg(foutfilename,&cvg);
 				free_convg(&cvg);
 			}
 			//if(temp==1) //bad convergence or only one chain
@@ -626,6 +623,8 @@ void inf_K_val(char *outfilename, int n_small, int n_large, SEQDATA *data,INIT i
 		}
 	} //end omp parallel if
 
+	/*
+	//CALCULATE BEST K USING DIC
 	//if(flag==1) //use the minimum DIC
 	//{
 		for(K=0;K<K_num;K++)
@@ -641,7 +640,7 @@ void inf_K_val(char *outfilename, int n_small, int n_large, SEQDATA *data,INIT i
 	fclose(outfile);
 	free_dmatrix(dic,0,K_num-1,0,initial.chainnum-1);
 	free_dvector(val_K,0,K_num-1);
-	
+	*/
 
 }
 
