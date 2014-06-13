@@ -6,6 +6,9 @@
 #include <assert.h>
 
 #include <omp.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <limits.h>
 
 #include "nrutil.h"
 #include "random.h"
@@ -152,7 +155,6 @@ int mode=1;	//indicate which mode is used:
  * ./InStruct -d example.str -o exampleout.txt -N 50 -L 50 -lb 1 -a 1 -w 1 -mm 3.0e9 -v 0 -ik 1 -kv 1 7 -c 1 -u 10000 -b 1250 -t 25 -r 250 -cf exampleconv.txt
  * ./InStruct -d example.str -o exampleout.txt -N 50 -L 50 -lb 1 -a 1 -w 1 -mm 3.0e9 -v 0 -ik 1 -kv 1 7 -c 1 -u 10000 -b 1250 -t 25 -g 0
 */
- 
  
  
  
@@ -540,14 +542,14 @@ void printinfo(char *outfilename,int argc, char **argv,SEQDATA data)
    
 
 
-
-void inf_K_val(char *outfilename, int n_small, int n_large, SEQDATA *data,INIT initial)
+void inf_K_val(char *outfilename, int n_small, int n_large, SEQDATA *data, INIT initial)
 {
+
 
 	//flag=0;
 	int parallelism_enabled = 1; //0=no, not 0 = yes
-
-	#pragma omp parallel if(parallelism_enabled)
+	int pid = getpid();
+	#pragma omp parallel if(parallelism_enabled) 
 	{
 
 	int K,chn,K_best,K_num;//flag,,temp;
@@ -581,15 +583,23 @@ void inf_K_val(char *outfilename, int n_small, int n_large, SEQDATA *data,INIT i
 			//modify outfilename so each K produces its own output
 			strcpy(foutfilename,outfilename); //start with original outfilename
 
+			//int K to char pK
 			int ndigits = floor(log10(K)) + 1;
-			char p[ndigits]; //char array to contain int, sized to length of K
+			char pK[ndigits]; //char array to contain int, sized to length of K
+			sprintf(pK, "%d", K); //convert integer K into a char array
+			
+			//int pid to char pid
+			char ppid[(sizeof(int)*CHAR_BIT-1)/3 + 3];
+			sprintf(ppid, "%d", pid); //convert integer pid into a char array
+
 			char pp[2] = ".";
-			sprintf(p, "%d", K); //convert integer K into a char array
 			strncat(foutfilename, pp, 1); //add terminal "."
-			strncat(foutfilename, p, strlen(p)); //add terminal "K"
+			strncat(foutfilename, ppid, strlen(ppid)); //add process id
+			strncat(foutfilename, pp, 1); //add "."
+			strncat(foutfilename, pK, strlen(pK)); //add "K"
 
 			int tid = omp_get_thread_num();
-			printf("t%d,K%d,p%s,pp%s,out(%s),fout(%s)\n",tid,K,p,pp,outfilename,foutfilename);
+			printf("t%d,K%d,pK%s,pp%s,out(%s),fout(%s),pid(%d)\n",tid,K,pK,pp,outfilename,foutfilename,pid);
 			//getchar();
 
 
@@ -623,6 +633,52 @@ void inf_K_val(char *outfilename, int n_small, int n_large, SEQDATA *data,INIT i
 		}
 	} //end omp parallel if
 
+	//COMBINE SEPARATE OUTPUT FILES
+	printf("combining files.\n");
+	char foutfilename[strlen(outfilename)];
+	int K;
+	for(K=n_small;K<=n_large;K++)
+	{
+		//modify outfilename so each K produces its own output
+		strcpy(foutfilename,outfilename); //start with original outfilename
+
+		//int K to char pK
+		int ndigits = floor(log10(K)) + 1;
+		char pK[ndigits]; //char array to contain int, sized to length of K
+		sprintf(pK, "%d", K); //convert integer K into a char array
+			
+		//int pid to char pid
+		char ppid[(sizeof(int)*CHAR_BIT-1)/3 + 3];
+		sprintf(ppid, "%d", pid); //convert integer pid into a char array
+
+		char pp[2] = ".";
+		strncat(foutfilename, pp, 1); //add terminal "."
+		strncat(foutfilename, ppid, strlen(ppid)); //add process id
+		strncat(foutfilename, pp, 1); //add "."
+		strncat(foutfilename, pK, strlen(pK)); //add "K"
+
+		//open the base file (head) and the file to append (tail)
+		FILE *head = fopen(outfilename, "ab");
+		FILE *tail = fopen(foutfilename, "rb");
+		if (!head || !tail) abort();
+		
+		//append
+		char buf[1024];
+		size_t n;
+    	while ((n = fread(buf, 1, sizeof buf, tail)) > 0)
+        if (fwrite(buf, 1, n, head) != n) abort();
+    	if (ferror(tail)) abort();
+    	
+    	//close
+    	fclose(head);
+    	fclose(tail); 
+    	
+    	//delete the file just appended (to do)
+	}
+
+	
+	
+	
 	/*
 	//CALCULATE BEST K USING DIC
 	//if(flag==1) //use the minimum DIC
